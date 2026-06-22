@@ -1,0 +1,86 @@
+#!/bin/bash
+
+# ==========================================================================
+# Update ROOT_DIR, DESIGN, TOP_LEVEL, XILINX_VIVADO, and RAPIDWRIGHT_PATH to
+# reflect your environment.
+
+# This repository's directory.
+ROOT_DIR="/home/bcheng/workspace/dev/sandbox-rw"
+
+# Name of your Verilog project.
+DESIGN="fir_filter"
+
+# Name of the top level module of your Verilog project.
+TOP_LEVEL="top_level"
+
+# Directories of your Vivado 2025.1.1 and RapidWright installations.
+export XILINX_VIVADO=/home/bcheng/workspace/tools/Xilinx/2025.1.1/Vivado
+export RAPIDWRIGHT_PATH=/home/bcheng/workspace/tools/RapidWright
+
+# (end of user's variables)
+# ==========================================================================
+
+export PATH="$PATH:$XILINX_VIVADO/bin"
+export JAVA_HOME=$XILINX_VIVADO/tps/lnx64/jre21.0.1_12
+export PATH="$JAVA_HOME/bin:$PATH"
+export PATH="$PATH:$RAPIDWRIGHT_PATH/bin"
+export CLASSPATH=$RAPIDWRIGHT_PATH/bin:$RAPIDWRIGHT_PATH/jars/*
+export _JAVA_OPTIONS=-Xmx32736m
+
+SYNTH_TCL="$ROOT_DIR/tcl/synth.tcl"
+RTL_TCL="$ROOT_DIR/tcl/rtl.tcl"
+PLACE_TCL="$ROOT_DIR/tcl/place.tcl"
+ROUTE_TCL="$ROOT_DIR/tcl/route.tcl"
+SIM_TCL="$ROOT_DIR/tcl/sim.tcl"
+
+DESIGN_DIR="$ROOT_DIR/hdl/verilog/${DESIGN}"
+TOP_PARAMS_FILE="$DESIGN_DIR/parameters_top_level.txt"
+XELAB_TOP_PARAMS=""
+SYNTH_TOP_PARAMS=""
+
+# Vivado Synthesis Stage
+if [ "$start_stage" == "synth" ]; then
+    echo "Running Vivado synthesis..."
+    vivado -mode batch -source $SYNTH_TCL -nolog -nojournal -tclargs $ROOT_DIR $DESIGN $SYNTH_TOP_PARAMS
+    check_exit_status "Vivado synthesis"
+    echo "Vivado synthesis completed. Check 'synthesized.dcp'."
+fi
+
+# Vivado RTL Synthesis Stage
+if [ "$start_stage" == "rtl" ]; then
+    echo "Running Vivado RTL synthesis..."
+    cd "$DESIGN_DIR/src"
+    cd $ROOT_DIR
+    vivado -mode batch -source $RTL_TCL -nolog -nojournal -tclargs $ROOT_DIR $DESIGN $SYNTH_TOP_PARAMS
+    check_exit_status "Vivado RTL"
+    echo "Vivado synthesis completed. Starting GUI."
+fi
+
+# Java Compile Stage
+if [ "$start_stage" == "compile" ]; then
+    echo "Building Java project with Gradle..."
+    rm -rf "$ROOT_DIR/outputs/placers/*"
+    cd $ROOT_DIR/java
+    gradle build
+    check_exit_status "Gradle build"
+    echo "Gradle build completed."
+fi
+
+# Java Placement Stage
+if [ "$start_stage" == "place" ] || [ "$start_stage" == "all" ]; then
+    rm $ROOT_DIR/outputs/placers/* -r
+    echo "Running Java placement with Gradle..."
+    cd $ROOT_DIR/java
+    gradle run --args="$ROOT_DIR"
+    check_exit_status "Gradle run"
+    cd $ROOT_DIR
+    echo "Java placement executed. Check 'logger.txt' for output."
+fi
+
+# Vivado Route Stage
+if [ "$start_stage" == "route" ] || [ "$start_stage" == "all" ]; then
+    echo "Running Vivado route..."
+    vivado -mode batch -source $ROUTE_TCL -nolog -nojournal -tclargs $ROOT_DIR
+    check_exit_status "Vivado route"
+    echo "Vivado route completed. Check 'routed.dcp'."
+fi
