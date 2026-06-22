@@ -38,12 +38,19 @@ TOP_PARAMS_FILE="$DESIGN_DIR/parameters_top_level.txt"
 XELAB_TOP_PARAMS=""
 SYNTH_TOP_PARAMS=""
 
+check_exit_status() {
+    if [ $? -ne 0 ]; then
+        echo "$1 failed."
+        exit 1
+    fi
+}
+
 # Vivado Synthesis Stage
 if [ "$start_stage" == "synth" ]; then
     echo "Running Vivado synthesis..."
     vivado -mode batch -source $SYNTH_TCL -nolog -nojournal -tclargs $ROOT_DIR $DESIGN $SYNTH_TOP_PARAMS
     check_exit_status "Vivado synthesis"
-    echo "Vivado synthesis completed. Check 'synthesized.dcp'."
+    echo "Finished Vivado synthesis."
 fi
 
 # Vivado RTL Synthesis Stage
@@ -52,8 +59,8 @@ if [ "$start_stage" == "rtl" ]; then
     cd "$DESIGN_DIR/src"
     cd $ROOT_DIR
     vivado -mode batch -source $RTL_TCL -nolog -nojournal -tclargs $ROOT_DIR $DESIGN $SYNTH_TOP_PARAMS
-    check_exit_status "Vivado RTL"
-    echo "Vivado synthesis completed. Starting GUI."
+    check_exit_status "Vivado RTL synthesis"
+    echo "Finished Vivado RTL synthesis. Starting GUI."
 fi
 
 # Java Compile Stage
@@ -62,8 +69,8 @@ if [ "$start_stage" == "compile" ]; then
     rm -rf "$ROOT_DIR/outputs/placers/*"
     cd $ROOT_DIR/java
     gradle build
-    check_exit_status "Gradle build"
-    echo "Gradle build completed."
+    check_exit_status "Java compile"
+    echo "Finished Java compile."
 fi
 
 # Java Placement Stage
@@ -72,9 +79,9 @@ if [ "$start_stage" == "place" ] || [ "$start_stage" == "all" ]; then
     echo "Running Java placement with Gradle..."
     cd $ROOT_DIR/java
     gradle run --args="$ROOT_DIR"
-    check_exit_status "Gradle run"
+    check_exit_status "Java place"
     cd $ROOT_DIR
-    echo "Java placement executed. Check 'logger.txt' for output."
+    echo "Finished Java place."
 fi
 
 # Vivado Route Stage
@@ -82,5 +89,5 @@ if [ "$start_stage" == "route" ] || [ "$start_stage" == "all" ]; then
     echo "Running Vivado route..."
     vivado -mode batch -source $ROUTE_TCL -nolog -nojournal -tclargs $ROOT_DIR
     check_exit_status "Vivado route"
-    echo "Vivado route completed. Check 'routed.dcp'."
+    echo "Finished Vivado route."
 fi
