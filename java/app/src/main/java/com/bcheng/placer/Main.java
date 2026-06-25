@@ -1,6 +1,5 @@
 package com.bcheng.placer;
 
-import java.util.stream.Collectors;
 import java.util.List;
 import java.util.Set;
 import java.util.ArrayList;
@@ -8,25 +7,16 @@ import java.util.Collection;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.HashMap;
+import java.util.stream.Collectors;
 import java.io.FileWriter;
-import java.io.File;
 import java.io.IOException;
 
-import com.xilinx.rapidwright.design.Net;
-import com.xilinx.rapidwright.design.ModuleInst;
-import com.xilinx.rapidwright.design.Module;
-import com.xilinx.rapidwright.design.ConstraintGroup;
 import com.xilinx.rapidwright.design.Design;
-import com.xilinx.rapidwright.design.SiteInst;
-
 import com.xilinx.rapidwright.device.Device;
-import com.xilinx.rapidwright.device.ClockRegion;
-import com.xilinx.rapidwright.device.Tile;
-import com.xilinx.rapidwright.device.TileTypeEnum;
 
 import com.xilinx.rapidwright.edif.EDIFHierCellInst;
 import com.xilinx.rapidwright.edif.EDIFCellInst;
-import com.xilinx.rapidwright.edif.EDIFPortInst;
+import com.xilinx.rapidwright.edif.EDIFNetlist;
 
 public class Main {
 
@@ -40,54 +30,72 @@ public class Main {
         System.out.println("Synthesized .dcp file location: " + synthesizedDcp);
         Design design = Design.readCheckpoint(synthesizedDcp);
         Device device = Device.getDevice("xc7z020clg400-1");
+        EDIFNetlist netlist = design.getNetlist();
 
-        // Create a map to group cells by type
-        Map<String, List<EDIFHierCellInst>> EDIFCellGroups = new HashMap<>();
-        Set<String> uniqueEdifCellTypes = new HashSet<>();
+        Map<String, List<EDIFHierCellInst>> ehciGroups = groupEDIFHierCellInsts(design);
+        printUniqueEDIFCellTypes(ehciGroups);
 
+        Map<String, EDIFCellInst> eciMap = netlist.generateCellInstMap();
+        printCellInstMap(eciMap);
+
+        return;
+    }
+
+    public static Map<String, List<EDIFHierCellInst>> groupEDIFHierCellInsts(Design design) {
+        Map<String, List<EDIFHierCellInst>> ehciGroups = new HashMap<>();
         // Organize EDIFHierCellInsts into "groups", where group labels are:
-        // RAMB18E1, DSP18E1, CARRY4, FDRE, FDSE, LUT (LUT2-6 all in one group), etc.
+        // RAMB18Ex, DSP48Ex, CARRY4, FDRE, FDSE, LUT (LUT2-6 all in one group), etc.
         for (EDIFHierCellInst ehci : design.getNetlist().getAllLeafHierCellInstances()) {
             String cellType = ehci.getInst().getCellType().getName();
-            // group all luts together
+            // Group all LUT variants together
             if (cellType.contains("LUT"))
                 cellType = "LUT";
-            // populate unique cell types
-            if (uniqueEdifCellTypes.add(cellType)) // set returns bool
-                EDIFCellGroups.put(cellType, new ArrayList<>()); // spawn unique group
-            // add cell to corresponding group
-            EDIFCellGroups.get(cellType).add(ehci); // add cell to corresponding group
+            ehciGroups.computeIfAbsent(cellType, k -> new ArrayList<>()).add(ehci);
         }
+        return ehciGroups;
+    }
 
+    public static void printCellInstMap(Map<String, EDIFCellInst> eciMap) throws IOException {
+        writer = new FileWriter(rootDir + "/outputs/edifCellInstMap.txt");
+        writer.write("\n\nPrinting EDIFCellInst Map...");
+        for (Map.Entry<String, EDIFCellInst> entry : eciMap.entrySet()) {
+            EDIFCellInst eci = entry.getValue();
+
+            String s1 = String.format("\n\tType: %-20s Name: %-100s", eci.getCellType().getName(), entry.getKey());
+
+            writer.write(s1);
+        }
+        writer.close();
+    }
+
+    public static void printUniqueEDIFCellTypes(
+            Map<String, List<EDIFHierCellInst>> ehciGroups) throws IOException {
         writer = new FileWriter(rootDir + "/outputs/uniqueEdifCellTypes.txt");
-        writer.write("\n\nSet of all Unique EDIF Cell Types... (" + uniqueEdifCellTypes.size() + ")");
-        for (String edifCellType : uniqueEdifCellTypes) {
+        writer.write("\n\nSet of all Unique EDIF Cell Types... (" + ehciGroups.size() + ")");
+        for (String edifCellType : ehciGroups.keySet()) {
             writer.write("\n\t" + edifCellType);
         }
         writer.write("\n\nPrinting EDIFCells By Type...");
-        for (Map.Entry<String, List<EDIFHierCellInst>> entry : EDIFCellGroups.entrySet()) {
+        for (Map.Entry<String, List<EDIFHierCellInst>> entry : ehciGroups.entrySet()) {
+            // Print name of cell type and number of cells in that list
             writer.write("\n\n" + entry.getKey() + " Cells (" + entry.getValue().size() + "):");
-            List<EDIFCellInst> cells = entry.getValue().stream()
-                    .map(e -> e.getInst())
+            // Get list of cell instances belonging to this cell type
+            List<EDIFCellInst> ecis = entry.getValue().stream()
+                    .map(EDIFHierCellInst::getInst)
                     .collect(Collectors.toList());
-            printEDIFCellInstList(cells);
+            if (ecis.size() > 0) {
+                String cellType = ecis.get(0).getCellType().getName();
+                writer.write("\n\tPrinting all EDIFCellInsts of type " + cellType + "... (" + ecis.size() + ")");
+                writer.write("\n\t(Cell_Inst_Type: Cell_Inst_Name)");
+            }
+            for (EDIFCellInst eci : ecis) {
+                writer.write("\n\t\t" + eci.getCellType() + ": " + eci.getName());
+                // Collection<EDIFPortInst> epis = eci.getPortInsts();
+                // for (EDIFPortInst epi : epis)
+                //     writer.write("\n\t\t\t" + epi.getFullName());
+            }
         }
-
-    }
-
-    public static void printEDIFCellInstList(List<EDIFCellInst> ecis) throws IOException {
-        if (ecis.size() > 0) {
-            String cellType = ecis.get(0).getCellType().getName();
-            writer.write("\n\tPrinting all EDIFCellInsts of type " + cellType + "... (" + ecis.size() + ")");
-            writer.write("\n\t(Cell_Inst_Type: Cell_Inst_Name)");
-        }
-        for (EDIFCellInst eci : ecis) {
-            writer.write("\n\t\t" + eci.getCellType() + ": " + eci.getName());
-            // Collection<EDIFPortInst> epis = eci.getPortInsts();
-            // for (EDIFPortInst epi : epis) {
-            //     writer.write("\n\t\t\t" + epi.getFullName());
-            // }
-        }
+        writer.close();
     }
 
 }
