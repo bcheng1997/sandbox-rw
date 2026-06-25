@@ -19,6 +19,8 @@ repositories {
 dependencies {
     // This dependency is used by the application.
     implementation libs.guava
+    implementation files("${System.getenv('RAPIDWRIGHT_PATH')}/bin")
+    implementation fileTree(dir: "${System.getenv('RAPIDWRIGHT_PATH')}/jars", include: ['*.jar'])
 }
 
 testing {
