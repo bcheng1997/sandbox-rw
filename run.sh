@@ -38,6 +38,9 @@ TOP_PARAMS_FILE="$DESIGN_DIR/parameters_top_level.txt"
 XELAB_TOP_PARAMS=""
 SYNTH_TOP_PARAMS=""
 
+start_stage=${1:-all} # Use first argument or defaults to all
+num_args=$#           # Number of arguments into script
+
 check_exit_status() {
     if [ $? -ne 0 ]; then
         echo "$1 failed."
@@ -48,7 +51,7 @@ check_exit_status() {
 # Vivado Synthesis Stage
 if [ "$start_stage" == "synth" ]; then
     echo "Running Vivado synthesis..."
-    vivado -mode batch -source $SYNTH_TCL -nolog -nojournal -tclargs $ROOT_DIR $DESIGN $SYNTH_TOP_PARAMS
+    vivado -mode batch -source $SYNTH_TCL -nolog -nojournal -tclargs $ROOT_DIR $DESIGN $TOP_LEVEL $SYNTH_TOP_PARAMS
     check_exit_status "Vivado synthesis"
     echo "Finished Vivado synthesis."
 fi
@@ -56,9 +59,8 @@ fi
 # Vivado RTL Synthesis Stage
 if [ "$start_stage" == "rtl" ]; then
     echo "Running Vivado RTL synthesis..."
-    cd "$DESIGN_DIR/src"
     cd $ROOT_DIR
-    vivado -mode batch -source $RTL_TCL -nolog -nojournal -tclargs $ROOT_DIR $DESIGN $SYNTH_TOP_PARAMS
+    vivado -mode batch -source $RTL_TCL -nolog -nojournal -tclargs $ROOT_DIR $DESIGN $TOP_LEVEL $SYNTH_TOP_PARAMS
     check_exit_status "Vivado RTL synthesis"
     echo "Finished Vivado RTL synthesis. Starting GUI."
 fi
@@ -74,7 +76,7 @@ if [ "$start_stage" == "compile" ]; then
 fi
 
 # Java Placement Stage
-if [ "$start_stage" == "place" ] || [ "$start_stage" == "all" ]; then
+if [ "$start_stage" == "place" ]; then
     rm $ROOT_DIR/outputs/placers/* -r
     echo "Running Java placement with Gradle..."
     cd $ROOT_DIR/java
@@ -85,7 +87,7 @@ if [ "$start_stage" == "place" ] || [ "$start_stage" == "all" ]; then
 fi
 
 # Vivado Route Stage
-if [ "$start_stage" == "route" ] || [ "$start_stage" == "all" ]; then
+if [ "$start_stage" == "route" ]; then
     echo "Running Vivado route..."
     vivado -mode batch -source $ROUTE_TCL -nolog -nojournal -tclargs $ROOT_DIR
     check_exit_status "Vivado route"

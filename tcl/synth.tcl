@@ -2,22 +2,17 @@
 
 set root_dir [lindex $argv 0]
 set design [lindex $argv 1]
-set top_params [join [lrange $argv 2 end] " "]
+set top_level [lindex $argv 2]
+set top_params [join [lrange $argv 3 end] " "]
 
-# set root_dir "/home/bcheng/workspace/dev/place-and-route"
 set synthesized_dcp "$root_dir/outputs/checkpoints/synthesized.dcp" 
-
-# set design "counter"
-# set src_dir "$root_dir/hdl/vhdl/$design/$design.srcs/sources_1/new"
-# set verif_dir "$root_dir/hdl/vhdl/$design/$design.srcs/sim_1/new"
-# set xdc_dir "$root_dir/hdl/vhdl/$design/$design.srcs/constrs_1/new"
 
 set src_dir "$root_dir/hdl/verilog/$design/src"
 set verif_dir "$root_dir/hdl/verilog/$design/verif"
 set xdc_dir "$root_dir/hdl/verilog/$design/constrs"
 
 # Read in source files
-set src_files [glob -nocomplain -directory $src_dir {*.[v, sv]}]
+set src_files [glob -nocomplain -directory $src_dir {*.sv}]
 foreach file $src_files {
     puts "reading: $file"
     # read_verilog $file
@@ -35,7 +30,8 @@ read_xdc $xdc_file
 puts "synth.tcl: Received HDL top level parameters: $top_params"
 
 # set cmd "synth_design -mode out_of_context -part xc7z020clg400-1 -fsm_extraction user_encoding -top top_level $top_params"
-set cmd "synth_design -mode out_of_context -part xc7z020clg400-1 -top top_level $top_params"
+# set cmd "synth_design -mode out_of_context -part xc7z020clg400-1 -top $design $top_params"
+set cmd "synth_design -mode out_of_context -part xczu3eg-sbva484-1-e -top $top_level $top_params"
 puts "synth.tcl: Running command: $cmd"
 
 # execute synth_design command
