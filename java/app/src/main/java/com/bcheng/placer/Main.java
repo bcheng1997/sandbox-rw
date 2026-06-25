@@ -64,7 +64,7 @@ public class Main {
         for (String edifCellType : uniqueEdifCellTypes) {
             writer.write("\n\t" + edifCellType);
         }
-        writer.write("\nPrinting EDIFCells By Type...");
+        writer.write("\n\nPrinting EDIFCells By Type...");
         for (Map.Entry<String, List<EDIFHierCellInst>> entry : EDIFCellGroups.entrySet()) {
             writer.write("\n\n" + entry.getKey() + " Cells (" + entry.getValue().size() + "):");
             List<EDIFCellInst> cells = entry.getValue().stream()
@@ -79,13 +79,14 @@ public class Main {
         if (ecis.size() > 0) {
             String cellType = ecis.get(0).getCellType().getName();
             writer.write("\n\tPrinting all EDIFCellInsts of type " + cellType + "... (" + ecis.size() + ")");
+            writer.write("\n\t(Cell_Inst_Type: Cell_Inst_Name)");
         }
         for (EDIFCellInst eci : ecis) {
             writer.write("\n\t\t" + eci.getCellType() + ": " + eci.getName());
-            Collection<EDIFPortInst> epis = eci.getPortInsts();
-            for (EDIFPortInst epi : epis) {
-                writer.write("\n\t\t\t" + epi.getFullName());
-            }
+            // Collection<EDIFPortInst> epis = eci.getPortInsts();
+            // for (EDIFPortInst epi : epis) {
+            //     writer.write("\n\t\t\t" + epi.getFullName());
+            // }
         }
     }
 
