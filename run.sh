@@ -10,6 +10,10 @@ ROOT_DIR="/home/bcheng/workspace/dev/sandbox-rw"
 # Name of your Verilog project.
 DESIGN="fir_filter"
 
+# Name of the desired FPGA device
+DEVICE="xczu3eg-sbva484-1-e" # Zynq Ultrascale MPSoC
+# DEVICE="xc7z020clg400-1" # Zynq 7000
+
 # Name of the top level module of your Verilog project.
 TOP_LEVEL="top_level"
 
@@ -51,7 +55,7 @@ check_exit_status() {
 # Vivado Synthesis Stage
 if [ "$start_stage" == "synth" ]; then
     echo "Running Vivado synthesis..."
-    vivado -mode batch -source $SYNTH_TCL -nolog -nojournal -tclargs $ROOT_DIR $DESIGN $TOP_LEVEL $SYNTH_TOP_PARAMS
+    vivado -mode batch -source $SYNTH_TCL -nolog -nojournal -tclargs $ROOT_DIR $DESIGN $DEVICE $TOP_LEVEL $SYNTH_TOP_PARAMS
     check_exit_status "Vivado synthesis"
     echo "Finished Vivado synthesis."
 fi
@@ -80,7 +84,7 @@ if [ "$start_stage" == "place" ]; then
     rm $ROOT_DIR/outputs/placers/* -r
     echo "Running Java placement with Gradle..."
     cd $ROOT_DIR/java
-    gradle run --args="$ROOT_DIR"
+    gradle run --args="$ROOT_DIR $DEVICE"
     check_exit_status "Java place"
     cd $ROOT_DIR
     echo "Finished Java place."

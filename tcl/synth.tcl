@@ -2,8 +2,9 @@
 
 set root_dir [lindex $argv 0]
 set design [lindex $argv 1]
-set top_level [lindex $argv 2]
-set top_params [join [lrange $argv 3 end] " "]
+set device [lindex $argv 2]
+set top_level [lindex $argv 3]
+set top_params [join [lrange $argv 4 end] " "]
 
 set synthesized_dcp "$root_dir/outputs/checkpoints/synthesized.dcp" 
 
@@ -34,7 +35,7 @@ puts "synth.tcl: Received HDL top level parameters: $top_params"
 
 # set cmd "synth_design -mode out_of_context -part xc7z020clg400-1 -fsm_extraction user_encoding -top top_level $top_params"
 # set cmd "synth_design -mode out_of_context -part xc7z020clg400-1 -top $design $top_params"
-set cmd "synth_design -mode out_of_context -part xczu3eg-sbva484-1-e -top $top_level $top_params"
+set cmd "synth_design -mode out_of_context -part $device -top $top_level $top_params"
 puts "synth.tcl: Running command: $cmd"
 
 # execute synth_design command
